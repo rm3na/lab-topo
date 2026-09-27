@@ -3,7 +3,7 @@
 #  c845a-poc-setup.sh — Avatar/RAG POC platform on the Cisco UCS C845A (no BCM)
 #
 #  Target : Ubuntu 24.04 LTS installed on the C845A (RAID 5 root), static IP set
-#           during install on X710 port 0 / VLAN 12.
+#           during install on X710 port 0 (enp175s0f0np0), 10.3.50.0/24 (VLAN 50).
 #  Builds : host prep -> containerd -> Kubernetes (kubeadm, single node) ->
 #           Calico -> MetalLB -> Traefik -> local-path storage -> monitoring ->
 #           NVIDIA GPU Operator -> MinIO -> (Milvus) -> POC namespaces -> tests
@@ -18,8 +18,8 @@
 # --- Node identity / network (must match DNS on dns01) ---
 NODE_HOSTNAME="c845a01"
 DOMAIN="ik.lab"
-NODE_IP="192.168.12.20"
-DNS_NTP_SERVER="192.168.12.10"
+NODE_IP="10.3.50.68"
+DNS_NTP_SERVER="10.3.50.70"
 K8S_API_NAME="k8s-api.ik.lab"            # A record -> NODE_IP
 
 # --- Outbound proxy (leave empty for direct internet) ---
@@ -27,13 +27,13 @@ HTTP_PROXY_URL=""                         # e.g. http://proxy.ikusi.local:3128
 
 # --- Kubernetes ---
 K8S_MINOR="v1.36"                         # pkgs.k8s.io channel; GPU Operator 26.3.x supports 1.36
-POD_CIDR="10.244.0.0/16"                  # must NOT overlap 192.168.x (Calico's default does!)
+POD_CIDR="10.244.0.0/16"                  # must not overlap 10.3.50.0/24 or Calico's 192.168.0.0/16 default
 SVC_CIDR="10.96.0.0/12"
 
-# --- MetalLB pool and fixed service IPs (VLAN 12) ---
-METALLB_RANGE="192.168.12.100-192.168.12.110"
-INGRESS_IP="192.168.12.100"               # Traefik  -> avatar / rag-api / grafana / *.apps
-S3_IP="192.168.12.101"                    # MinIO S3 API
+# --- MetalLB pool and fixed service IPs (10.3.50.0/24) ---
+METALLB_RANGE="10.3.50.71-10.3.50.84"
+INGRESS_IP="10.3.50.71"               # Traefik  -> avatar / rag-api / grafana / *.apps
+S3_IP="10.3.50.72"                    # MinIO S3 API
 
 # --- NVIDIA ---
 GPU_OPERATOR_VERSION="v26.3.2"            # empty = latest chart
@@ -81,7 +81,7 @@ wait_rollout() { kubectl -n "$1" rollout status "$2" --timeout="${3:-300s}"; }
 
 # Proxy for this shell (apt, curl, helm)
 if [[ -n "$HTTP_PROXY_URL" ]]; then
-  NO_PROXY_LIST="localhost,127.0.0.1,${NODE_IP},${DOMAIN},.${DOMAIN},${POD_CIDR},${SVC_CIDR},192.168.12.0/24,.svc,.cluster.local"
+  NO_PROXY_LIST="localhost,127.0.0.1,${NODE_IP},${DOMAIN},.${DOMAIN},${POD_CIDR},${SVC_CIDR},10.3.50.0/24,.svc,.cluster.local"
   export http_proxy="$HTTP_PROXY_URL" https_proxy="$HTTP_PROXY_URL" no_proxy="$NO_PROXY_LIST"
   export HTTP_PROXY="$HTTP_PROXY_URL" HTTPS_PROXY="$HTTP_PROXY_URL" NO_PROXY="$NO_PROXY_LIST"
 fi
@@ -292,7 +292,7 @@ EOF
 fi
 
 # =============================================================================
-# 5. METALLB (L2 mode on VLAN 12)
+# 5. METALLB (L2 mode on 10.3.50.0/24)
 # =============================================================================
 if [[ "$RUN_METALLB" == "true" ]]; then
   log "MetalLB (${METALLB_RANGE})"
