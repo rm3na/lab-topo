@@ -423,6 +423,19 @@ EOF
     sleep 15
   done
   [[ -n "${n:-}" && "${n:-0}" != "0" ]] || die "GPUs not advertised — check: kubectl -n gpu-operator get pods; logs of nvidia-driver-daemonset"
+
+  # NVIDIA DCGM dashboard (grafana.com ID 12239) auto-loaded by the Grafana sidecar
+  if [[ "$RUN_MONITORING" == "true" ]]; then
+    log "Grafana: NVIDIA DCGM dashboard"
+    if curl -fsSL https://grafana.com/api/dashboards/12239/revisions/latest/download -o /tmp/dcgm.json; then
+      sed -i 's/[$]{DS_PROMETHEUS}/prometheus/g' /tmp/dcgm.json
+      kubectl -n monitoring create configmap grafana-dcgm-dashboard \
+        --from-file=nvidia-dcgm.json=/tmp/dcgm.json --dry-run=client -o yaml | kubectl apply -f -
+      kubectl -n monitoring label configmap grafana-dcgm-dashboard grafana_dashboard=1 --overwrite
+    else
+      warn "Could not download DCGM dashboard — import ID 12239 manually in Grafana"
+    fi
+  fi
 fi
 
 # =============================================================================
