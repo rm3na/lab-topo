@@ -381,8 +381,10 @@ if [[ "$RUN_GPU_OPERATOR" == "true" ]]; then
 
   GPU_ARGS=()
   [[ -n "$GPU_OPERATOR_VERSION" ]] && GPU_ARGS+=(--version "$GPU_OPERATOR_VERSION")
-  # Host driver already present? then don't let the operator install one
-  if command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null 2>&1; then
+  # Host driver already present (and not one the operator installed)? then don't install one
+  if kubectl -n gpu-operator get ds nvidia-driver-daemonset >/dev/null 2>&1; then
+    [[ -n "$GPU_DRIVER_VERSION" ]] && GPU_ARGS+=(--set driver.version="$GPU_DRIVER_VERSION")
+  elif command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null 2>&1; then
     warn "Host NVIDIA driver detected — operator driver disabled"
     GPU_ARGS+=(--set driver.enabled=false)
   elif [[ -n "$GPU_DRIVER_VERSION" ]]; then
