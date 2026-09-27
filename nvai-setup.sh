@@ -248,6 +248,9 @@ EOF
   fi
   # Single node: allow workloads on the control plane
   kubectl taint nodes "${NODE_HOSTNAME}" node-role.kubernetes.io/control-plane:NoSchedule- 2>/dev/null || true
+  # kubeadm labels control-plane nodes to be excluded from external load balancers;
+  # MetalLB honours it, so on a single node no LoadBalancer IP would ever be announced
+  kubectl label node "${NODE_HOSTNAME}" node.kubernetes.io/exclude-from-external-load-balancers- 2>/dev/null || true
 
   # Helm
   command -v helm >/dev/null || curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
