@@ -259,8 +259,9 @@ if [[ "$RUN_CNI" == "true" ]]; then
   log "Calico CNI"
   CALICO_VER=$(gh_latest projectcalico/calico)
   echo "Calico ${CALICO_VER}"
-  kubectl create -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VER}/manifests/tigera-operator.yaml" 2>/dev/null \
-    || kubectl apply --server-side -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VER}/manifests/tigera-operator.yaml"
+  # server-side apply is idempotent; --force-conflicts takes over fields from an earlier 'kubectl create'
+  kubectl apply --server-side --force-conflicts \
+    -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VER}/manifests/tigera-operator.yaml"
   kubectl -n tigera-operator rollout status deploy/tigera-operator --timeout=300s
   cat <<EOF | kubectl apply -f -
 apiVersion: operator.tigera.io/v1
