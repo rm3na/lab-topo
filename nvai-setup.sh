@@ -42,8 +42,9 @@ ENABLE_TIME_SLICING=false                 # true = each GPU advertised as TS_REP
 TS_REPLICAS=2
 NGC_API_KEY=""                            # optional now; needed for NIM / Riva images from nvcr.io
 
-# --- Object storage (MinIO community is archived upstream; last release pinned for POC) ---
-MINIO_IMAGE="quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z"
+# --- Object storage: official MinIO images are gone (repo archived Apr 2026);
+#     pgsty/minio is a maintained community fork, drop-in compatible ---
+MINIO_IMAGE="docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z"
 
 # --- Stages ---
 RUN_PREFLIGHT=true
